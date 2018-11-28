@@ -1,0 +1,203 @@
+Notes partially borrowed from Robert Morris, 6.824.
+
+The design of a practical system for fault-tolerant virtual machines
+
+The motivation: 
+  Software that can continue despite failures!
+  - e.g. machines crashes
+  - not network failures, malicious software etc.
+
+The main approach
+  - Replicated virtual machine
+  - *Two* servers, each keeps state 
+    If one replica fails, the other can continue
+
+Why replicate at the VM level?
+  - how about replicate at the storage level.
+
+Example usage: fault-tolerant MapReduce master
+  lab 1 master is a "single point of failure"
+  can we have two masters, in case one fails?
+  [diagram: M1, M2, workers]
+  state:
+    worker list
+    which jobs done
+    which workers idle
+    TCP connection state
+    program counter
+
+  How does M/R replicate master's state? 
+    - do nothing
+    - checkpoints state to GFS
+
+Two main approaches:
+  State transfer
+    "Primary" replica executes the service
+    Primary sends [new] state to backups
+  Replicated state machine
+    All replicas execute all operations
+    If same start state,
+      same operations,
+      same order,
+      deterministic,
+      then same end state
+
+State transfer is simpler
+  But state may be large, slow to transfer
+  VM-FT uses replicated state machine
+
+Replicated state machine is more efficient
+  operations tend to be smaller than data
+  But complex to get right
+    e.g. order on multi-core, determinism
+
+What are the operations for replicated state machine?
+  K/V put and get?
+  x86 instructions? <---- VM-FT!!!
+  Pros: 
+  - Completely transparent to applications and clients
+  - Hard to achieve good performance (compared to w/o replication)
+  
+The design of a Practical System for Fault-Tolerant Virtual Machines
+Scales, Nelson, and Venkitachalam, SIGOPS OSR Vol 44, No 4, Dec 2010
+
+Overview
+  [diagram: app, O/S, VM-FT underneath]
+  two machines, primary and backup; and other machines
+  two networks: clients-to-servers, logging channel
+  shared-disk for persistent storage
+  back-up in "lock step" with primary
+    primary sends all inputs to backup
+    outputs of backup are dropped
+  heart beats between primary and backup
+    if primary fails, start backup executing!
+
+Challenges:
+  1. How to make backup an exact replica of primary
+    What operations must send to backup?
+      Clock interrupts?
+    How to deal with non-determinism?
+      E.g., Interrupt must be delivered at backup at same instruction as at primary
+  2.  How to make failover consistent?
+      if primary fails just before or after sending response to client
+      might a client request be lost? executed twice?
+    When does the primary send a response to a client?
+  
+Challenge 1: deterministic replay
+  Goal: make x86 platform deterministic
+    idea: use hypervisor to make virtual x86 platform deterministic
+    two phases: logging and replay
+  Log all hardware events into a log
+    clock interrupts, network interrupts, i/o interrupts, etc.
+    for non-deterministic instructions, record additional info
+      e.g., log the value of the time stamp register
+      on replay: return the value from the log instead of the actual register
+  Replay: delivery inputs in the same order at the same instructions
+    if during recording delivered clock interrupt at nth instruction executed
+    during replay also delivers the clock interrupt at the nth instruction
+  Given a log of events, deterministic replay recreates VM
+    hypervisor delivers first event
+    lets the machine execute to the next event
+      using special hardware registers to stop the processor at the right instruction
+    the virtual x86 executes identical during replay as during recording
+      OS runs identical
+      Applications runs identical
+      -> Same outputs will be generated on replay as during recording
+  Limitation: cannot handle multicore processors x86
+    Too expensive to record and replay the correct interleaving of instructions
+
+Example:
+  primary receives network interrupt
+    hypervisor forwards interrupt plus data to backup
+    hypervisor delivers network interrupt to OS kernel
+    OS kernel runs
+    kernel delivers packet to server
+    server/kernel write response to network card
+    hypervisor gets control and puts response on the wire
+  backup receives log entries
+    backup delivers network interrupt at the same point in instruction stream
+    hypervisor delivers interrupt to its OS kernel
+    ...
+    hypervisor gets control
+      does *not* put response on the wire
+
+    hypervisor ignores local clock interrupts
+      it gets clock interrupts from primary
+  primary and backup get same inputs, end up in same state
+
+Challenge 2 solution: FT protocol
+  Primary delays any external output (e.g. a packet) until the backup acks
+    Log entry for each output operation
+    Primary sends output after backup acked receiving output operation
+  Performance optimization:
+    primary keeps executing passed output operations
+    buffers output until backup acknowledges
+
+Q: Why send output events to backup and delay output until backup has acked?
+  Consider: don't log output events. Log only input events.
+  Primary:
+    process network input
+    produces output
+    primary fails
+  Backup cannot reproduce this sequence correctly:
+    last log entry is: process network input
+      deliver it to kernel
+    backup goes "live"
+      it becomes the primary
+    hardware interrupt (e.g., clock)
+      deliver it to the kernel  (since backup is live now)
+    the network input results in output
+      did the primary produce output before hardware interrupt or before?
+      backup doesn't know
+        it doesn't have a log entry for the interrupt
+	it doesn't have a log entry for output
+      important because clock interrupt may have influenced output
+  By sending start output event to backup, backup can order events correctly
+    clock interrupt before or after start output event
+
+Note that both primary and backup can produce the same output event
+  --> Authors claim producing output twice is *not* a problem
+    if output is network packet, client must be able to handle duplicate packets
+    if output is write to disk, write the same data twice to the same location
+      but there cannot any other writes in between (they would have been in the log)
+      so, should be ok
+    
+Q: What happens when primary fails after receiving network input but before
+sending a corresponding log entry to backup?
+  A: network input. service relies on client to retry.
+    this is reasonable because network could have lost request packet
+  A: disk input. hypervisor restarts pending disk I/O
+
+Challenge 2 solution: shared disk
+    Backup replays through last log entry
+    Backup atomically test-and-set variable on disk
+      If set, primary is still alive. Commit suicide
+      If not set, primary is dead. Become primary
+      If primary, create new backup from checkpoint
+        Using VMotion
+      
+Shared storage is single-point of failure
+    If shared storage is down, service is down
+  Ok for paper's setting, but for geo-replicate services
+    Cannot survive earthquakes
+
+Q: How long is service unavailable after primary fails?
+  Detect failure
+  Execute log entries
+    VM-FT slows down primary if backup gets too far behind
+  Write shared storage
+  Switch to "live"
+
+Performance (table 1)
+  FT/Non-FT: impressive!
+    little slow down
+  Why oracle/ ms-sql generate more logging b/w?
+
+Summary:
+  Primary-backup replication
+    VM-FT: clean example
+  How to get better performance?
+    Primary-back replication using higher-level replicated state machines
+      key/value operations such as put and get
+
+  

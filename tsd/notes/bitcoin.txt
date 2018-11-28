@@ -1,0 +1,223 @@
+Bitcoin: A Peer-to-Peer Electronic Cash System, by Satoshi Nakamoto
+(Parts of the note is due to rtm)
+
+What we've learnt so far: distributed systems within datacenters, 
+ - closed system, only certain nodes are allowed to participate
+ - managed by a single adminstrative entity.
+
+Today: peer-to-peer systems across the internet
+ - open systems, anyone can join
+ - no single administrative entity
+
+The BitCoin System: Before BitCoin, online commerce is done exclusively 
+via credit cards, paypal(bank transfers, e-checks).
+
+what's right/wrong with cash?
+  +  portable
+  +  cannot spend twice
+  +  cannot repudiate after payment
+  +  no need for trusted 3rd party
+  +  anonymous (serial #s?)
+  -  doesn't work online
+  -  easy to steal
+  +- hard to tax / monitor
+  +- government can print more as economy expands
+
+we want e-money; what about credit cards?
+  (paypal and bank e-checks are similar)
+  +  works online 
+  +  hard to steal (a complex situation)
+  +- can repudiate
+  -  requires trusted 3rd party
+  -  tracks all your purchases
+  -  can prohibit some xactions (e.g. wikileaks donations)
+  +- easy for government to monitor/tax/control
+
+bitcoin: e-money without a central trusted party
+
+what's hard socially/economically?
+  why does it have value?
+  how to convert?
+  how to pay for infrastructure?
+  monetary policy (intentional inflation &c)
+  laws (taxes, laundering, drugs, terrorists)
+
+what's hard technically?
+  forgery
+  theft
+  double spending
+
+The key ideas in BitCoin, one by one
+
+Based on public key crytography.
+The preliminaries: Each key is a pair, public(K), private(K).
+Public(k): public information.
+Private(k): private information, not to disclosed to anyone.
+
+encrypt using Public(k): decrypt using Private(k)
+sign using Private(k): verify using Public(k)
+
+cryptographic hash:  input: a buffer of arbitary length
+                     output: 160-bit or 256 integer
+property: 
+* deterministic  same input --> same output
+* collision resistant, given X -> h_x
+                  it's only 2^(-160) likely to find X' such that X'-> h_x 
+
+Idea #1: Cryptocurrency
+Ownership of currency = possession of some private key
+Transfer of currency = signing "ownership" away to another party
+
+A "coin" is a transaction record, 
+T1: A->B
+pub(A)->pub(B), sig(A)
+
+T2: B->C
+pub(B)->pub(C), sig(B)
+
+How to ensure T2 is the spending the same coin of T1?
+i.e. how to link T2 to T1.
+
+rely on a unique coin identifier?
+- does not work. why? does not establish a non-repudiable ordering of transactions.
+
+A secure chain of transaction record
+T2: B->C
+pub(C), hash(T1), sig(B)
+
+Overall,
+B obtains coin somewhere (e.g. T1), (the bootstraping process will be discussed later)
+Suppose B wants to buy a pizza from C, 
+		1. C gives B a newly generated public key, 
+		2. B signs T2 and gives T2 to C, C verifies validity of each step along the chain all the way up to "beginning"
+		3. C gives pizza to B.
+
+Questions: 
+-Forgery? No
+-Theft? No unless the corresponding private key has been stolen
+-Doublespending? Yes.
+
+How to address the doublespending problem?
+- Relatively easy with a central party (CP)
+  
+CP keeps track of all transactions in a log.
+(Why a log? not just a simple collection? In case of doublespending, log
+ establishes which record is first, which is the dup.)
+
+		1. C gives B a newly generated public key, 
+		2. B signs T2 and gives T2 to C, C asks CP to verify that T2's coin has not been spent already
+		3. C gives pizza to B.
+
+Works, but is centralized.
+
+Solve doublespending in a decentralized way?
+
+Idea #2: Make all peers keep track of all records as a common, global log
+All peers join the BT network.
+Each transaction is broadcasted to all peers
+
+Problem? How to ensure all peers keep the same log?
+Is overhead an issue? (How many transactions per day?)
+
+Can we run Paxos among all peers?
+-impractical: (peers join and leave, difficult to get a stable global view of who's currently in the system? Nobody has run a Paxos among thousands of nodes...) 
+-Paxos is not secure against malicious nodes. If bad nodes deviate from protocol, they can cause different honest nodes can accept different values (i.e. logs diverge). However, there's a variant of Paxos (PBFT) that resists against <1/3 colluding malicious attackers.
+-Once consensus fails to reach, no way to resolve disagreement. (need human intervention?)
+-Identity flooding attack: what if a malicious attacker control lots (>1/3) of IP addresses?
+
+Idea #3: Proof-of-work
+Each peer can validate and extend the log independently after *provably* spending lots of work (CPU resource)
+
+3.1.  The Blockchain
+Each peer stores the blockchain for the entire system
+B1 <--- B2 <--- B3 <---- B4
+What does each block contain:
+   - a list of transaction records, e.g. T1, T5, T7 ...
+   - hash(the previous block)
+   - proof-of-work ("nonce")
+   -...
+
+Why hash(previous block)? Establish ordering and non-repudiation (cannot change individual block's ordering)
+
+3.2. Proof-of-work
+Every peer must "work hard" to extend the block chain by a new block.
+What's work? Evidence that one has spent a lot of CPU power 
+
+hash (block, ??) = a randomly 256 bit number
+Find nonce such as hash(block, nonce)  < target
+There's no better solution than bruteforce:
+	hash(block, 0) <? target
+	hash(block, 1) <? target 
+	....
+	Bingo!
+
+3.3. The longest chain wins as the main block chain
+(Unlike Paxos, Consensus needs not be perfect here. It's okay to disagree sometimes as long as it'll eventually be resolved.)
+If every peer works on extending the block chain simultaneously, there will be conflicts.
+how to resolve? everybody agrees to take the longest
+-> results in some wasted efforts, but it's okay 
+(Right now, ~5 wasted blocks per day on average.)
+
+How hard should target set to be?
+- Too hard --> limit tx rate
+- Too easy --> lots of churn on what's the main chain, lots of orphaned blocks
+
+BitCoin: target is set so that it takes the *all peers* 10 minutes to find the next block.
+
+Why do people want to help with chain extension?
+- each new block contains a reward of 25 coins for the miner.
+- this is how money gets minted in BT.
+
+What's the BT network's transaction rate? (block size limit is 1MB, per transaction size ~150bytes)
+~ 10 tx/sec
+
+BitCoin mining: the more peers mine, the harder it becomes for each individual
+Jan, 2009: bitcoin first started
+May, 2010: the hash rate of the entire network is 0.1 GHashes/sec
+Now: 2.5*10^9 GHashes/sec
+
+Hash rate of a single CPU? 1~6 Mhashes/sec
+
+These days, mining is dominated by ASIC (hardware), > 1,000 GHashes/sec, equipment sells for several thousands dollars
+
+The overall process:
+	To do B->C:
+		1. B signs T2(B->C) and broadcasts T2 to all peers
+		2. Each peer checks the validity of each tx in a batch (including T2) and creates a new block candidate.
+		   for each tx, one must check
+		   - coin is valid
+		   - no double-spending in current blockchain
+		3. Each peer tries to mine the nonce for its new block candidate
+		4. One peer finds gold, broadcast to all peers, all peers switch to work on the next new block
+
+Question?
+
+How does this prevent/defer double spending?
+How long should C wait before giving B pizza?
+
+
+BitCoin's other properties:
+mining stops after 21 million coins
+- rewards per block halves every 4 years
+- now the reward is 12.5 bitcoins per block (halving happened summer 2016 from 25 to 12.5)
+
+Why? Is it going to be a problem?
+
+-max bitcoin is ~21 million
+-bitcoin generated so far ~16 million
+
+Other questions:
+What can adversary do with a majority of CPU power?
+
+Can bitcoin scale well? 
+- size of ledger grows over time (currently, 93GB)
+- cost of signatures checks
+- go back to very old blocks to check validity of coins?
+
+Downsides of BitCoin vs. credit cards?
+- No disputes
+- No loss/recovery
+
+Downside of BitCoin as an ecash?
+- no anonymity.
+- ledger is public information.

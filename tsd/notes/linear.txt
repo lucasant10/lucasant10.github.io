@@ -1,0 +1,191 @@
+History of consistency models
+  Much independent development in architecture, systems, and database communities
+    Concurrent processors with private caches accessing a shared memory
+    Concurrent clients accessing a distributed file system
+    Concurrent transactions on distributed database
+  Many different models with different trade-offs
+    serializability
+    sequential consistency
+    linearizability
+    entry consistency
+    release consistency
+    ....
+ 
+Topic: "Strong" Consistency
+  Consistency = meaning of operations in the face of concurrency and failure 
+  Choice trades off between performance and programmer-friendliness
+    Huge factor in many designs
+ 
+Many systems have storage/memory w/ concurrent readers and writers (and can fail)
+  Multiprocessors, databases, AFS, lab key-value service
+  You often want to improve in ways that risk changing behavior:
+    add caching
+    split over multiple servers
+    replicate for fault tolerance
+  How do we know if an optimization is correct?
+  We need a way to think about correct (expected) behavior
+  Most of these ideas from multiprocessors and databases 20/30 years ago
+
+Linearizability paper focues on abstract data types, we use the same concept but focus on
+  key/value storage with simple reads/writes
+
+Naive replicated key-value store
+  [diagram]
+  C0, M0, C1, M1, LAN
+  each machine has a local copy of all key-value content
+  read: from local copy 
+  write: send update msg to each other host (but don't wait)
+  fast: never waits for communication
+  Does this memory work well?
+   
+Example 1:
+  initial values are all zeros
+  C0:
+  	PUT("x",1);
+	PUT("y",1);
+  C1:
+    while ((y = GET("y"))!=1);
+	x = GET("x");
+	print x, y
+  
+  Intuitive intent:
+    C1 should print x=1, y=1
+
+Problem A:
+  [time diagram]
+  M0's PUTs of x and y may be interchanged by network
+  leaving x unset but y=1
+  how to fix? would lab RPC fix?
+
+Naive distributed memory is fast but has unexpected behavior
+  maybe it isn't "correct"
+  maybe we should never have expected Example 1 to work
+
+How can we write correct distributed programs w/ shared storage?
+  Storage (or memory) system promises to behave according to certain rules.
+  We write programs assuming those rules.
+  Rules are a "consistency model"
+  Contract between storage system and programmer
+
+What makes a good consistency model?
+  There are no "right" or "wrong" models
+  A model may make it harder or easier to program
+    i.e. lead to more or less intuitive results
+  A model may be harder or easier to implement efficiently
+  Also application dependent
+    e.g. Web pages vs memory vs. database
+
+What's a strong model like?
+  It's easy for users to reason about correctness assuming 
+     1) sequential behavior and 2) everything has only one-copy 
+  Intuitively, a user should expect anything that can be explained by 
+  an **equivalent**  *sequential behavior*
+
+Example 1:
+  C0:   WR(x=1) WR_ok(x)   WR(y=1)        WR_ok(y)
+  C1:                        RD(y=?)  RD_ok(y=1)  RD(x=?) RD(x=1)
+
+  An equivalent sequential history
+  C0:   WR(x=1) WR_ok(x)   WR(y=1)    WR_ok(y)
+  C1:                                          RD(y=?)  RD_ok(y=1)  RD(x=?) RD(x=1)
+
+  C0:   WR(x=1)      WR_ok(x)       WR(y=1)        WR_ok(y)
+  C1:          RD(y=?)  RD_ok(y=1)      RD(x=?) RD(x=0)
+
+  An "equivalent" sequential history
+  C0:                    WR(x=1) WR_ok(x) WR(y=1)  WR_ok(y)
+  C1:   RD(x=?)RD_ok(x=0)                                   RD(y=?) RD(y=1)
+
+
+How to define equivalence?
+  Equivalence ==> certain orders in the original history must be maintained by the constructed, hypothetical sequential history
+
+Many possibilities, equivalent sequential history can preserve:
+   1 global issuing order
+   2 global completion order
+   3 per-process issuing/completion order (sequential consistency)
+   4 global "completion-to-issuing" order (linearizability)
+
+   1,2 > 4 > 3
+
+1,2 are impractical to realize in a distributed setting! 
+  Example: difficulty of 1
+  M0: PUT(x)              PUT_ok(x)
+  M1:  PUT(y)    PUT_ok(y)
+  Put(x) must be ordered before PUT(y), but how does machine M1 even aware of
+  another machine M0's PUT request and to pause till M0 is finished?
+  (the paper's "blocking/non-blocking" refers to this kind of impracticality)
+  
+3 is practical example implementation: each (non-replicated) server
+(responsible for an object) processes the request in FIFO order.
+
+4 is also practical, 
+  same example implementation.
+
+The subtle difference between 3 & 4.
+  C0:   P(x=1)   P_ok(x)       P(y=1)        P_ok(y)
+  C1:                         G(x=?)  G_ok(x=0)      G(y=?) G_ok(y=0)
+Legal under 3, but not 4.
+
+Why choosing the stronger 4 over 3?
+  * If an application does not have any "external communication" (communication only happens through reads/writes of shared objects), 3 is sufficient.
+  * Otherwise, one might see "unexpected behavior".
+  In the above history, after C0 has gotten P_ok(x), user C0 calls C1 over the phone (external communication) and tells him to go check the value of x, C1 performs his GET as shown in the history and sees the value of x=0. This is "unexpected behavior" for the application...
+  * Hence, sometimes, linearizability is also referred to as "external consistency"
+
+Properties of linearizability:
+  * local (if each object is linearizable, then overall system is linearizable)
+  --> distribution/scalability is easily realizied by partitioning the responsibility of objects
+		  
+How to implement 4. with data replication?
+  two servers M0, M1, replicating a single object x 
+  Processing PUTs:
+  * can a client send updates to either of the servers?
+  * must a client wait till all servers have processed the update?
+
+  Process GETs:
+  * can clients send read to either of the servers?
+  * can a server always return its current value?
+
+Simple design #D1:
+  Clients send all reads/writes at a designated machine, say M0, 
+  for writes:
+     1. M0 forwards writes to M1 and waits for acknowledgement 
+	 2. M0 executes writes locally (in order)
+	 3. M0 responds to the client
+  for reads:
+     1. M0 reads its local copy and returns value to the client
+	 
+  Two notes on step 1 of write: 
+    - M0 must associate each forwarded write with a proper seqno so M1 processes writes in the same order as M0)
+    - M0 must wait for the forwarded write to be safely stored at M1 (hence waiting for M1's acknowledgement). Otherwise, a write might be lost across failure and violates linearizability. 
+
+  * D1 is the simple primary/backup replication scheme
+
+Simple design #D2:
+  1. process all writes at M0, M0 replicate writes to M1
+  2. client waits for updates to M1 to complete.
+  3. client can issue read to either M0 or M1.
+
+  #D2 is not linearizable!
+  P(x=1)                            P_ok(x=1)
+        G(x=?)G_ok(x=1)  
+                        G(x=?)G_ok(x=0)
+
+  First GET contacts M0, second GET contacts M1
+
+  If each client sticks to sending all its requests to one machine (but different clients can send to different machines), our implementation is sequentially consistent (but not still linearizable)
+
+How to allow reads to happen at a different node? two ways:
+  1. writes occur in two passes
+    first phase M0 sends "prepare write"
+	second phase M0 sends "commit write"...
+	block reads after seeing "prepare write" but before seeing "commit write"
+  2. chain replication (google "OSDI 2004 chain replication")
+
+What about multi-processor CPUs?
+  * does not do linearizability
+  * does not do sequential consistency either
+  * more nuanced / subtle
+  * Example 1 does not work under multi-processor. use locks when concurrently accessing shared memory!
+  * why not? 

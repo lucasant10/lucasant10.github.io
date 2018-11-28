@@ -1,0 +1,210 @@
+A case study of distributed storage systems: The Google File System
+(SOSP 2003)
+Notes partially borrowed from Robert Morris, 6.824.
+
+Motivation for GFS (What problem it tries to solve)
+  Google needs to store
+    search indexes 
+    all the HTML files on the web
+    all the images on the web
+    Map/reduce uses GFS for input/output
+    ...
+
+GFS Goal: 
+  - create a shared file system
+  - high aggregate performance (huge storage, huge throughput)
+  - fault tolerant
+    * w/ 1000 machines, ~3 will fail per day.
+
+
+What's GFS' approach:
+  - Supports a file system like API (but not POSIX)
+  - A single master in charge of directory structure, mapping from a file to its chunks etc. 
+  - 1000s chunk servers storing 64MB chunks.
+  - 3X replication for chunks
+
+How GFS works at a high level? 
+  [draw picture]
+  client read:
+    send file name and offset to master
+    master replies with chunk_handle + location (i.e. set of servers storing that chunk)
+      clients cache that information for a little while
+    read from nearest chunk server
+  client write:
+    ask master where to store, master returns chunk_handle + location.
+    send writes to the 3 chunk servers.
+    need to ask master again whenever crossing 64 MB
+
+How does this overall approach achieve GFS' goal?
+  - high performance: single master design is sufficient because of GFS' workloads:
+	Files are huge:
+	  Multi-terabyte data sets
+	  Many of the files are large: 100MB~several GB
+	Mostly large sequential reads/writes
+  - Workload GFS is not good for?
+    - tons of small file operations
+    (git, compile large source tree)
+
+What are devils of the details? (technical challenges)
+  - Consistency (i.e. semantics)
+  - Fault tolerance
+
+What is consistency?
+  A correctness condition (defines the set of legal outcomes of a system)
+  There's many different models 
+  <--------------------------> 
+  weak                      strong
+  The strongest model:
+   - behave identically to an idealized system in which there is no failure and no replication.
+   (read finished writes, reads are consistent with each other)
+   - we'll formalize this in the next lecture.
+ 
+  General models:
+   - strong consistency is easy to use for application writers
+   - weak consistency is simpler to implement, better in performance
+
+"Ideal" consistency model
+  A replicated files behaves like as a non-replicated file system
+    picture: many clients on the same machine accessing files on a single disk
+  If one application writes, later reads will observe that write
+  What if two application concurrently write to the same file
+    In file systems often undefined  --- file may have some mixed content
+  What if two application concurrently write to the same directory
+    One goes first, the other goes second
+
+Sources of inconsistency
+  Concurrency
+  Machine failures
+  Network partitions
+
+The concurrency challenge:
+---------------------
+  draw picture of clients, 3 chunk servers
+  Naive approach: 
+  clients write to chunk servers in arbitary order
+  
+  Say client-A write 1, client-B write 2 concurrently. 
+  What are "expected" results?
+  all servers store 1 or all servers store 2.
+
+  Outcome of naive approach?
+ 
+  Can this happen in GFS?
+
+GFS' solution to achieving consistency under concurrency:
+Primary/backup
+  One of the replicas is the primary of the chunk (chosen by master)
+  Primary determines orders operations
+  Clients pushes chunk data to replicas
+  Client sends write request to primary
+    Primary assigns sequence number
+    Primary applies change locally
+    Primary forwards request to replicates
+    Primary responds to client after receiving acks from all replicas
+
+Wait, concurrent writes to the same file?
+ - Random writes by multiple writers never occur in real workloads. 
+   (They are quite meaningless for applications, even under the ideal model)
+  0000111222222000
+ - The practical concurrent write situation: Concurrent append
+   e.g. multiple web server (crawler) appending to the same log file
+   Not supported by regular file system API which only supports write at a particular offset.
+   (hence, two conrrent writes will over-write each other's data)
+   GFS provides atomic record append.
+
+Another concurrency example:
+  Say client-A write 1, client-B write 2 while client-C also reads concurrenty from two different replica servers
+  What are "expected" results?
+  client-C reads "1" then "2". "2" is stored at the end.
+  client-C reads "2" then "1". "1" is stored at the end.
+ 
+  can this happen in GFS?
+  client-C reads "1" then "2". "1" is stored at the end.
+
+  Yes. So GFS does not offer strong consistency.
+
+  Fixes?
+  All reads go to primary as well.
+
+The Failure Challenge:
+--------------------
+  Append under failure:
+
+  client sends r1 to three chunk servers: primary, backup-A, backup-B
+  client makes append request at primary
+  primary appends r1 locally at offset x
+  primary notifies backup-A, backup-B to append at offset x.
+  backup-A replies success. backup-B fails to reply.
+  Client retries.
+  sends r1...
+  primary appends r1 at offset x+100
+  succeeds...
+   
+  client reads offset x at backup-A, different from read at backup-B.
+
+
+The Network Partition challenge:
+(and the uncertainty of failure)
+----------------------
+  Example:
+  Primary is temporarily partitioned from the rest of the network.
+  Master promotes backup-A to be new primary.
+  Network partition heals
+  client-A sends write to old primary
+  client-B sends write to new primary
+
+  GFS's solution?
+  Master grants leases to primary:
+  A lease has a timeout of 60 seconds.
+  Primary is only valid when its lease is valid.
+
+Other challenges
+----------------------------------
+Concurrency at Master:
+  - Much simpler because there's only one master
+  - Master performs changes to metadata atomically (proper locking)
+Master fault tolerance
+  Single master
+    stores metadata in memory:
+    1. file/chunk namespace
+    2. mapping from files to chunks
+    3. chunk location
+  What if the master crashes?
+    - Log changes to metadata type 1. and 2. in a log
+      log is replicated on several backups
+      logs play a central role in many systems we will read about
+    Chunk location is soft-state: recreated by asking chunk servers
+ Some external monitoring service detects failure
+    - if crashed master cannot be restarted, a new master is started.
+    - Recovered or new master replays logged changes.
+  How to avoid the two master situaton?
+
+Overall consistency guranteeds of GFS
+  - Strong consistency for directory operations
+  - Weak consistency for chunk operations
+    A failed mutation leaves chunks inconsistent
+      The primary chunk server updated chunk
+      But then failed and the replicas are out of date
+    A client may read an not-up-to-date chunk
+  Authors claims weak consistency is not a big problems for apps    
+    Most file updates are append-only updates
+      Application can use UID in append records to detect duplicates
+    Application can use temporary files and atomic rename
+    
+Performance (Figure 3)
+  What's the likely bottleneck of the system?
+  Explain the theorical limit for reads, writes
+    writes to different files lower than possible maximum
+  concurrent appends to single file
+    limited by the server that stores last chunk
+    
+Summary
+  GFS: achieves scalable, high performance
+  - simple design 
+    single master + chunk servers
+    works because of workloads are dominated by large read/write
+    file-system-like API: 
+    -simplicity (does not support all FS operations)
+    -customization for its workload (atomic append)
+  - Weak consistency 
+    - leads to good performance + simple implementation.
