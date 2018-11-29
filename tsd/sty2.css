@@ -56,6 +56,7 @@ color: #A07476;
 #content {
 	margin-left: 8em;
 	width: 50em;
+	
 }
 
 #onecolumn {
@@ -75,3 +76,17 @@ color: #A07476;
 	color: red;
 }
 
+#tutorial{
+	width: 50em;
+	font: monospace;
+	font-size: 200%;
+	color: #75788c;
+
+}
+
+#content2 {
+	margin-left: 8em;
+	margin-right: 8em;
+	background: #E7E6DF;
+	
+}

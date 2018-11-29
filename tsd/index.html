@@ -1,4 +1,154 @@
-<html>  <head>    <meta http-equiv="content-type" content="text/html; charset=utf-8">    <title>Tópicos em Sistemas distribuídos Calendário- 2018-2</title>    <meta http-equiv="pragma" content="no-cache">    <link rel="stylesheet" type="text/css" href="sty2.css">  </head>  <body>    <div id="header">      <h2>Tópicos em Sistemas Distribuídos (sujeito a alteração)</h2>    </div>    <div id="navigation">      <p> </p>      <p> [<a href="index.html">Home</a>] <br>        [<a href="schedule.html">Schedule</a>] <br>        [<a href="labs">Labs</a>] </p>    </div>    <div id="content">      <p><a href="http://www2.uesb.br/wp-content/uploads/2018/10/Calendario-Academico-20182-ferias-janeiro-RE.pdf">Calendário
-          Acadêmico</a>        <table>          <colgroup> <col class="date"> <col class="lec"> <col class="prep">          </colgroup>          <tbody>            <tr>              <th>Data</th>              <th>Aulas</th>              <th>Papers</th>            </tr>            <tr>              <td>26/11</td>              <td>Introdução e MapReduce<br>                <p> <a href="notes/ds-lec1.ppt">Note-1</a>, <a href="notes/ds-mr.ppt">Note-2</a></p>              </td>              <td><a href="../ds-reading#mr">MapReduce</a></td>            </tr>            <tr>              <td>29/11</td>              <td> RPC e Threads<br>                <a href="notes/l-rpc.txt">Note</a> <a href="notes/l-rpc.go">Toy                  RPC</a> </td>              <td><a href="../ds-reading#rpc">RPC and threads</a> </td>            </tr>            <tr>              <td>03/12</td>              <td> Primário/backup Replicação<br>                <a href="notes/l-gfs.txt">Note1</a>, <a href="notes/l-vm-ft.txt">Note2</a>              </td>              <td> <a href="../ds-reading#pb">GFS <br>                  VM-fault tolerance</a> </td>            </tr>            <tr>              <td>06/12</td>              <td>Linearizability<br>                <a href="notes/linear.txt">Notes</a></td>              <td> <a href="../ds-reading#linear">Linearizability</a></td>            </tr>            <tr>              <td>10/12</td>              <td>Consenso: Paxos <a href="notes/l-paxos.full.txt">Notes</a></td>              <td><a href="../ds-reading#paxos">[Paxos made simple]</a> </td>            </tr>            <tr>              <td>13/12</td>              <td> Paxos (continuação), Raft <br>              </td>              <td> <a href="../ds-reading#paxos">[Paxos made simple]</a><br>                <a href="../ds-reading#raft">[Raft]</a> </td>            </tr>            <tr>              <td>17/12</td>              <td>Relaxamento de Consistência<br>                <a href="notes/relaxed.pdf">notes</a> </td>              <td> <a href="../ds-reading#relaxed">[Bayou]</a><br>                <a href="../ds-reading#relaxed">[COPS:SOSP11]</a><br>              </td>            </tr>            <tr>              <td>20/12</td>              <td>Transações<br>                <a href="notes/l-transaction.txt">notes</a></td>              <td> <a href="../ds-reading#transaction">[Franklin97]</a><br>                <a href="../ds-reading#transaction">[Snapshot]</a><br>              </td>            </tr>            <tr>              <td><br>              </td>              <td>Transações Distribuídas I<br>                <a href="notes/2pc.txt">notes</a> <br>              </td>              <td> <a href="http://ocw.mit.edu/resources/res-6-004-principles-of-computer-system-design-an-introduction-spring-2009/online-textbook/atomicity_open_5_0.pdf">read
-                  9.6 of [SK-book]<br>                </a><a href="../fa12/papers/percolator.pdf">[Percolator:OSDI10]</a><br>              </td>            </tr>            <tr>              <td><br>              </td>              <td>Transações Distribuídas II<br>                <a href="notes/spanner.txt">notes</a> <br>                <br>              </td>              <td> <a href="../fa12/papers/spanner.pdf">[Spanner:OSDI12]</a><br>                <a href="../pub/sosp13-lynx.pdf">[Lynx:SOSP13]</a><br>              </td>            </tr>            <tr>              <td><br>              </td>              <td>Férias</td>              <td><br>              </td>            </tr>            <tr>              <td><br>              </td>              <td>Computação Paralela Revisitada<br>                Dataflow<br>                <a href="notes/ds-mrdryad.ppt">note-1</a>, <a href="notes/l-spark.txt">note-2</a><br>              </td>              <td> <a href="../sp07/papers/dryad.pdf">[Dryad]</a><br>                <a href="../fa14-ds/papers/zaharia-spark.pdf">[Spark]</a><br>                <a href="http://channel9.msdn.com/shows/Going+Deep/Expert-to-Expert-Erik-Meijer-and-Michael-Isard-Inside-Dryad/">This
-                  video</a> on Dryad is instructive<br>              </td>            </tr>            <tr>              <td><br>              </td>              <td>Computação Paralela: <br>                DSM, Graph Computation<br>                <a href="notes/treadmarks.txt">Notes1</a>,<a href="notes/powergraph.txt">Notes2</a>              </td>              <td> <a href="../fa10/papers/keleher-treadmarks.pdf">[Treadmarks]</a><br>                <a href="../fa14-ds/papers/graphlab.pdf">[GraphLab]</a><br>              </td>            </tr>            <tr>              <td><br>              </td>              <td>Peer-to-Peer: BitCoin <br>                <a href="notes/bitcoin.txt">Notes</a> <br>              </td>              <td><a href="../fa14-ds/papers/bitcoin.pdf">[BitCoin]</a><br>                <a href="http://www.michaelnielsen.org/ddi/how-the-bitcoin-protocol-actually-works/">[Summary]</a><br>              </td>            </tr>          </tbody>        </table>      </p>    </div>  </body></html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>Tópicos em Sistemas distribuídos Calendário- 2018-2</title>
+    <meta http-equiv="pragma" content="no-cache">
+    <link rel="stylesheet" type="text/css" href="sty2.css">
+  </head>
+  <body>
+    <div id="header">
+      <h1>Tópicos em Sistemas Distribuídos (sujeito a alteração)</h1>
+    </div>
+    <div id="navigation">
+      <p> </p>
+      <p> [<a href="index.html">Home</a>] <br>
+        [<a href="tutorial.html">Tutoriais</a>] <br>
+        </p>
+    </div>
+    <div id="content">
+      <p><a href="http://www2.uesb.br/wp-content/uploads/2018/10/Calendario-Academico-20182-ferias-janeiro-RE.pdf">Calendário
+          Acadêmico</a>
+        <table>
+          <colgroup> <col class="date"> <col class="lec"> <col class="prep">
+          </colgroup>
+          <tbody>
+            <tr>
+              <th>Data</th>
+              <th>Aulas</th>
+              <th>Papers</th>
+            </tr>
+            <tr>
+              <td>26/11</td>
+              <td>Introdução e MapReduce<br>
+               <!-- <p> <a href="notes/ds-lec1.ppt">Note-1</a>, <a href="notes/ds-mr.ppt">Note-2</a></p>-->
+              </td>
+              <td><a href="../ds-reading#mr">MapReduce</a></td>
+            </tr>
+            <tr>
+              <td>29/11</td>
+              <td> RPC e Threads<br>
+               <!-- <a href="notes/l-rpc.txt">Note</a> <a href="notes/l-rpc.go">Toy
+                  RPC</a>--> </td>
+              <td><a href="../ds-reading#rpc">RPC and threads</a> </td>
+            </tr>
+            <tr>
+              <td>03/12</td>
+              <td> Primário/backup Replicação<br>
+                <a href="notes/l-gfs.txt">Note1</a>, <a href="notes/l-vm-ft.txt">Note2</a>
+              </td>
+              <td> <a href="../ds-reading#pb">GFS <br>
+                  VM-fault tolerance</a> </td>
+            </tr>
+            <tr>
+              <td>06/12</td>
+              <td>Linearizability<br>
+                <a href="notes/linear.txt">Notes</a></td>
+              <td> <a href="../ds-reading#linear">Linearizability</a></td>
+            </tr>
+            <tr>
+              <td>10/12</td>
+              <td>Consenso: Paxos <a href="notes/l-paxos.full.txt">Notes</a></td>
+              <td><a href="../ds-reading#paxos">[Paxos made simple]</a> </td>
+            </tr>
+            <tr>
+              <td>13/12</td>
+              <td> Paxos (continuação), Raft <br>
+              </td>
+              <td> <a href="../ds-reading#paxos">[Paxos made simple]</a><br>
+                <a href="../ds-reading#raft">[Raft]</a> </td>
+            </tr>
+            <tr>
+              <td>17/12</td>
+              <td>Relaxamento de Consistência<br>
+                <a href="notes/relaxed.pdf">notes</a> </td>
+              <td> <a href="../ds-reading#relaxed">[Bayou]</a><br>
+                <a href="../ds-reading#relaxed">[COPS:SOSP11]</a><br>
+              </td>
+            </tr>
+            <tr>
+              <td>20/12</td>
+              <td>Transações<br>
+                <a href="notes/l-transaction.txt">notes</a></td>
+              <td> <a href="../ds-reading#transaction">[Franklin97]</a><br>
+                <a href="../ds-reading#transaction">[Snapshot]</a><br>
+              </td>
+            </tr>
+            <tr>
+              <td><br>
+              </td>
+              <td>Transações Distribuídas I<br>
+                <a href="notes/2pc.txt">notes</a> <br>
+              </td>
+              <td> <a href="http://ocw.mit.edu/resources/res-6-004-principles-of-computer-system-design-an-introduction-spring-2009/online-textbook/atomicity_open_5_0.pdf">read
+                  9.6 of [SK-book]<br>
+                </a><a href="../fa12/papers/percolator.pdf">[Percolator:OSDI10]</a><br>
+              </td>
+            </tr>
+            <tr>
+              <td><br>
+              </td>
+              <td>Transações Distribuídas II<br>
+                <a href="notes/spanner.txt">notes</a> <br>
+                <br>
+              </td>
+              <td> <a href="../fa12/papers/spanner.pdf">[Spanner:OSDI12]</a><br>
+                <a href="../pub/sosp13-lynx.pdf">[Lynx:SOSP13]</a><br>
+              </td>
+            </tr>
+            <tr>
+              <td><br>
+              </td>
+              <td>Férias</td>
+              <td><br>
+              </td>
+            </tr>
+            <tr>
+              <td><br>
+              </td>
+              <td>Computação Paralela Revisitada<br>
+                Dataflow<br>
+                <a href="notes/ds-mrdryad.ppt">note-1</a>, <a href="notes/l-spark.txt">note-2</a><br>
+              </td>
+              <td> <a href="../sp07/papers/dryad.pdf">[Dryad]</a><br>
+                <a href="../fa14-ds/papers/zaharia-spark.pdf">[Spark]</a><br>
+                <a href="http://channel9.msdn.com/shows/Going+Deep/Expert-to-Expert-Erik-Meijer-and-Michael-Isard-Inside-Dryad/">This
+                  video</a> on Dryad is instructive<br>
+              </td>
+            </tr>
+            <tr>
+              <td><br>
+              </td>
+              <td>Computação Paralela: <br>
+                DSM, Graph Computation<br>
+                <a href="notes/treadmarks.txt">Notes1</a>,<a href="notes/powergraph.txt">Notes2</a>
+              </td>
+              <td> <a href="../fa10/papers/keleher-treadmarks.pdf">[Treadmarks]</a><br>
+                <a href="../fa14-ds/papers/graphlab.pdf">[GraphLab]</a><br>
+              </td>
+            </tr>
+            <tr>
+              <td><br>
+              </td>
+              <td>Peer-to-Peer: BitCoin <br>
+                <a href="notes/bitcoin.txt">Notes</a> <br>
+              </td>
+              <td><a href="../fa14-ds/papers/bitcoin.pdf">[BitCoin]</a><br>
+                <a href="http://www.michaelnielsen.org/ddi/how-the-bitcoin-protocol-actually-works/">[Summary]</a><br>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </p>
+    </div>
+  </body>
+</html>
