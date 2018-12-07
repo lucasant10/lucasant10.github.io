@@ -1,1 +1,16 @@
-theme: jekyll-theme-slate
+# Site settings
+title: Lucas Santos de Oliveira
+email: lsoliveira@uesb.edu.br
+author: lucas
+description:
+url: lucasant10.github.io
+
+# Build settings
+permalink: :title/
+sass:
+  sass_dir: css
+
+# Social icons
+show_social_icons: true
+github_username: lucasant10
+twitter_username: lucassantos_o
